@@ -14,49 +14,25 @@ namespace Services_Pintae
     public interface IService1
     {
         [OperationContract]
-        string GetData(int value);
-
-        [OperationContract]
-        CompositeType GetDataUsingDataContract(CompositeType composite);
-
-        [OperationContract]
-        string ConexionPrueba();
-
-        [OperationContract]
         List<TramiteRealizado> ConsultaTramitesCiudadano(string cedula);
 
         [OperationContract]
         string ConsultaTramitesPorCedulaJson(string cedula);
-        // TODO: Add your service operations here
 
         [OperationContract]
         string ConsultaTramitePorIdJson(int id);
 
         [OperationContract]
-        string ConsultaTodosLosTipoDeTramites();
-    }
+        List<TipoTramite> GetAllTipoTramites();
 
+        [OperationContract]
+        string GetAllTipoTramitesJson();
 
-    // Use a data contract as illustrated in the sample below to add composite types to service operations.
-    [DataContract]
-    public class CompositeType
-    {
-        bool boolValue = true;
-        string stringValue = "Hello ";
+        [OperationContract]
+        List<TipoDato> GetRequisitosPorIdTramite(int id_tramite);
 
-        [DataMember]
-        public bool BoolValue
-        {
-            get { return boolValue; }
-            set { boolValue = value; }
-        }
-
-        [DataMember]
-        public string StringValue
-        {
-            get { return stringValue; }
-            set { stringValue = value; }
-        }
+        [OperationContract]
+        string GetRequisitosPorIdTramiteJson(int id_tramite);
     }
 
     [DataContract]
@@ -84,6 +60,11 @@ namespace Services_Pintae
     public class GetTramitesRealizados
     {
         public List<TramiteRealizado> listaTramites = new List<TramiteRealizado>();       
+    }
+
+    public class GetTiposTramites
+    {
+        public List<TipoTramite> listaTiposTramites = new List<TipoTramite>();
     }
 
     [DataContract]
@@ -119,7 +100,7 @@ namespace Services_Pintae
     public class TipoTramite
     {
         string nombre_tramite = "";
-        int id_tipo_tramite = 0;
+        int id_tramite = 0;
         
         [DataMember]
         public string Nombre_tramite
@@ -129,10 +110,31 @@ namespace Services_Pintae
         }
 
         [DataMember]
-        public int Id_tipo_tramite
+        public int Id_tramite
         {
-            get { return id_tipo_tramite; }
-            set { id_tipo_tramite = value; }
+            get { return id_tramite; }
+            set { id_tramite = value; }
         }    
+    }
+
+    [DataContract]
+    public class TipoDato
+    {
+        string nombre_dato = "";
+        string es_obligatorio = "";
+
+        [DataMember]
+        public string Nombre_dato
+        {
+            get { return nombre_dato; }
+            set { nombre_dato = value; }
+        }
+
+        [DataMember]
+        public string Es_obligatorio
+        {
+            get { return es_obligatorio; }
+            set { es_obligatorio = value; }
+        }
     }
 }
