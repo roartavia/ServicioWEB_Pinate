@@ -8,6 +8,7 @@ using System.Text;
 using MySql.Data.MySqlClient;
 using System.Collections;
 using Newtonsoft.Json;
+using System.Data;
 
 namespace Services_Pintae
 {
@@ -33,26 +34,31 @@ namespace Services_Pintae
             {
                 connection.Open();
 
-                string query = "select nombre_tramite,id_tramite_solicitado from tramite_solicitado as tramite inner join tipotramite as tipo on tramite.id_tipo_tramite = tipo.id_tramite where tramite.ciudadano = '" + cedula + "'";
-                //Create Command
+                string query = "select nombre_tramite,id_tramite_solicitado,fecha_solicitud,estado from tramite_solicitado as tramite inner join tipotramite as tipo on tramite.id_tipo_tramite = tipo.id_tramite where tramite.ciudadano = '" + cedula + "'";
                 MySqlCommand cmd = new MySqlCommand(query, connection);
-                //Create a data reader and Execute the command
                 MySqlDataReader dataReader = cmd.ExecuteReader();
-
-                while (dataReader.Read())
+                if (dataReader.HasRows)
                 {
-                    TramiteRealizado tramiteTemp = new TramiteRealizado();
-                    tramiteTemp.Id_tramite = int.Parse(dataReader["id_tramite_solicitado"].ToString());
-                    tramiteTemp.Nombre_tramite = dataReader["nombre_tramite"].ToString();
+                    while (dataReader.Read())
+                    {
+                        TramiteRealizado tramiteTemp = new TramiteRealizado();
+                        tramiteTemp.Id_tramite = int.Parse(dataReader["id_tramite_solicitado"].ToString());
+                        tramiteTemp.Nombre_tramite = dataReader["nombre_tramite"].ToString();
+                        tramiteTemp.Fecha_solicitud = dataReader["fecha_solicitud"].ToString();
+                        tramiteTemp.Estado = dataReader["estado"].ToString();
+                        listTramites.Add(tramiteTemp);
+                    }
+                    dataReader.Close();
+                    connection.Close();
 
-                    listTramites.Add(tramiteTemp);
+                    return listTramites;
                 }
-
-                dataReader.Close();
-
-                connection.Close();
-
-                return listTramites;
+                else
+                {
+                    dataReader.Close();
+                    connection.Close();
+                    return listTramites; //No hay trámites para ese ciudadano.
+                }
             }
             catch
             {
@@ -76,7 +82,7 @@ namespace Services_Pintae
             try {
                 connection.Open();
 
-                string query = "select nombre_tramite,id_tramite_solicitado from tramite_solicitado as tramite inner join tipotramite as tipo on tramite.id_tipo_tramite = tipo.id_tramite where tramite.ciudadano = '" + cedula + "'";
+                string query = "select nombre_tramite,id_tramite_solicitado,fecha_solicitud,estado from tramite_solicitado as tramite inner join tipotramite as tipo on tramite.id_tipo_tramite = tipo.id_tramite where tramite.ciudadano = '" + cedula + "'";
                 MySqlCommand cmd = new MySqlCommand(query, connection);
                 MySqlDataReader dataReader = cmd.ExecuteReader();
                 if (dataReader.HasRows)
@@ -86,7 +92,8 @@ namespace Services_Pintae
                         TramiteRealizado tramiteTemp = new TramiteRealizado();
                         tramiteTemp.Id_tramite = int.Parse(dataReader["id_tramite_solicitado"].ToString());
                         tramiteTemp.Nombre_tramite = dataReader["nombre_tramite"].ToString();
-
+                        tramiteTemp.Fecha_solicitud = dataReader["fecha_solicitud"].ToString();
+                        tramiteTemp.Estado = dataReader["estado"].ToString();
                         listTramites.listaTramites.Add(tramiteTemp);
                     }
                     dataReader.Close();
@@ -328,5 +335,262 @@ namespace Services_Pintae
             }
             catch { return "-1"; } //Error de conexión.
         }
+
+        //soolicita trámite
+        public string SolicitarTramite(int id_tramite, string cedula)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            try
+            {
+
+                connection.Open();
+
+                string query = "insert into tramite_solicitado (id_tipo_tramite, ciudadano,fecha_solicitud,estado) values ("+id_tramite+",'"+cedula+"',curdate(),'PENDIENTE')";
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                cmd.ExecuteReader();
+                connection.Close();
+
+                return "1";
+                
+            }
+            catch { return "-1"; } //Error de conexión.
+        }
+
+        //consultar que peticiones estan de datos que la institución pueda ofrecer
+        public List<Peticion> ConsultarPeticiones(int id_institucion)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            List<Peticion> listPeticiones = new List<Peticion>();
+
+            try
+            {
+
+                connection.Open();
+
+                string query = "select contandoDatosYaEntregados.id_dato, contandoDatosYaEntregados.ciudadano, contandoDatosYaEntregados.id_tramite_solicitado " +
+                "from (select ds.ciudadano, ds.id_tipodato from dato_solicitado ds) datosEntregados " +
+                "right join " +
+                "(select tipodatoinstitucion.id_dato, temp.ciudadano, temp.id_tramite_solicitado from " +
+                "(select rtd.id_dato, rtd.id_tramite, td.id_institucion from requisitotramitedato rtd " +
+                "inner join tipodato td on td.id_dato = rtd.id_dato) as tipodatoinstitucion " +
+                "inner join(select ts.id_tipo_tramite, ts.ciudadano, ts.id_tramite_solicitado from tramite_solicitado ts where ts.estado = 'PENDIENTE') as temp " +
+                "on tipodatoinstitucion.id_tramite = temp.id_tipo_tramite where tipodatoinstitucion.id_institucion = "+id_institucion+") " +
+                "as contandoDatosYaEntregados " +
+                "on datosEntregados.id_tipodato = contandoDatosYaEntregados.id_dato and datosEntregados.ciudadano = contandoDatosYaEntregados.ciudadano " +
+                "where datosEntregados.id_tipodato is null and datosEntregados.ciudadano is null";
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                if (dataReader.HasRows)
+                {
+                    while (dataReader.Read())
+                    {
+                        Peticion peticion = new Peticion();
+                        peticion.Id_tipo_dato = int.Parse(dataReader["id_dato"].ToString());
+                        peticion.Id_tramite_solicitado = int.Parse(dataReader["id_tramite_solicitado"].ToString());
+                        peticion.Cedula = dataReader["ciudadano"].ToString();
+                        listPeticiones.Add(peticion);
+                    }
+                    dataReader.Close();
+                    connection.Close();
+
+                    return listPeticiones;
+                }
+                else
+                {
+                    dataReader.Close();
+                    connection.Close();
+                    return listPeticiones; //No hay peticiones.
+                }
+            }
+            catch { return null; } //Error de conexión.
+        }
+
+        //consultar que peticiones estan de datos que la institución pueda ofrecer
+        public string ConsultarPeticionesJson(int id_institucion)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            List<Peticion> listPeticiones = new List<Peticion>();
+
+            try
+            {
+
+                connection.Open();
+
+                string query = "select contandoDatosYaEntregados.id_dato, contandoDatosYaEntregados.nombre_dato, contandoDatosYaEntregados.ciudadano, contandoDatosYaEntregados.id_tramite_solicitado " +
+"from (select ds.ciudadano, ds.id_tipodato from dato_solicitado ds) datosEntregados " +
+"right join " +
+"(select tipodatoinstitucion.id_dato, tipodatoinstitucion.nombre_dato, temp.ciudadano, temp.id_tramite_solicitado from " +
+"(select rtd.id_dato, rtd.id_tramite, td.id_institucion, td.nombre_dato from requisitotramitedato rtd " +
+"inner join tipodato td on td.id_dato = rtd.id_dato) as tipodatoinstitucion " +
+"inner join(select ts.id_tipo_tramite, ts.ciudadano, ts.id_tramite_solicitado from tramite_solicitado ts where ts.estado = 'PENDIENTE') as temp " +
+"on tipodatoinstitucion.id_tramite = temp.id_tipo_tramite where tipodatoinstitucion.id_institucion = " + id_institucion + ") " +
+"as contandoDatosYaEntregados " +
+"on datosEntregados.id_tipodato = contandoDatosYaEntregados.id_dato and datosEntregados.ciudadano = contandoDatosYaEntregados.ciudadano " +
+"where datosEntregados.id_tipodato is null and datosEntregados.ciudadano is null";
+                //string query = "select contandoDatosYaEntregados.id_dato, contandoDatosYaEntregados.ciudadano, contandoDatosYaEntregados.id_tramite_solicitado " +
+                //"from (select ds.ciudadano, ds.id_tipodato from dato_solicitado ds) datosEntregados " +
+                //"right join " +
+                //"(select tipodatoinstitucion.id_dato, temp.ciudadano, temp.id_tramite_solicitado from " +
+                //"(select rtd.id_dato, rtd.id_tramite, td.id_institucion from requisitotramitedato rtd " +
+                //"inner join tipodato td on td.id_dato = rtd.id_dato) as tipodatoinstitucion " +
+                //"inner join(select ts.id_tipo_tramite, ts.ciudadano, ts.id_tramite_solicitado from tramite_solicitado ts where ts.estado = 'PENDIENTE') as temp " +
+                //"on tipodatoinstitucion.id_tramite = temp.id_tipo_tramite where tipodatoinstitucion.id_institucion = " + id_institucion + ") " +
+                //"as contandoDatosYaEntregados " +
+                //"on datosEntregados.id_tipodato = contandoDatosYaEntregados.id_dato and datosEntregados.ciudadano = contandoDatosYaEntregados.ciudadano " +
+                //"where datosEntregados.id_tipodato is null and datosEntregados.ciudadano is null";
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                if (dataReader.HasRows)
+                {
+                    while (dataReader.Read())
+                    {
+                        Peticion peticion = new Peticion();
+                        peticion.Id_tipo_dato = int.Parse(dataReader["id_dato"].ToString());
+                        peticion.Id_tramite_solicitado = int.Parse(dataReader["id_tramite_solicitado"].ToString());
+                        peticion.Cedula = dataReader["ciudadano"].ToString();
+                        peticion.Nombre_dato = dataReader["nombre_dato"].ToString();
+                        listPeticiones.Add(peticion);
+                    }
+                    dataReader.Close();
+                    connection.Close();
+
+                    return JsonConvert.SerializeObject(listPeticiones);
+                }
+                else
+                {
+                    dataReader.Close();
+                    connection.Close();
+                    return "-2"; //No existe ese trámite.
+                }
+            }
+            catch { return "-1"; } //Error de conexión.
+        }
+
+        public string EntregarDato(int id_tipo_dato, int id_tramite_solicitado, byte[] valor, string cedula)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            try
+            {
+                string query = "insert into dato_solicitado (id_tipodato, ciudadano, valor) values (@pid_tipo_dato,@pciudadano,@pvalor)";
+                MySqlCommand cmd = new MySqlCommand();
+                cmd = connection.CreateCommand();
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = query;
+                cmd.Parameters.Add("@pid_tipo_dato", MySqlDbType.Int32).Value = id_tipo_dato;
+                cmd.Parameters.Add("@pciudadano", MySqlDbType.VarChar).Value = cedula;
+                cmd.Parameters.Add("@pvalor", MySqlDbType.VarBinary).Value = valor;
+
+                cmd.Connection.Open();
+                cmd.ExecuteNonQuery();
+                cmd.Connection.Close();
+                cmd.Connection.Dispose();
+                return "1";
+            }
+            catch { return "-1"; }    
+        }
+
+        public string GetNombreCatalogoTipoDato(int id_tipo_dato)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            string nombre_catalogo = "";
+
+            try
+            {
+
+                connection.Open();
+
+                string query = "select ctd.nombre_tipo from catalogo_tipo_dato ctd inner join tipodato td on ctd.id_catalogo_tipo_dato = td.id_catalogo_tipo_dato where td.id_dato = "+id_tipo_dato;
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                if (dataReader.HasRows)
+                {
+                    while (dataReader.Read())
+                    {
+                        nombre_catalogo = dataReader["nombre_tipo"].ToString();
+                    }
+                    dataReader.Close();
+                    connection.Close();
+
+                    return nombre_catalogo;
+                }
+                else
+                {
+                    dataReader.Close();
+                    connection.Close();
+                    return "-2"; //No existe ese tipo dato.
+                }
+            }
+            catch { return "-1"; } //Error de conexión.
+        }
+
+        public string CallProcEntregarDato(int id_tipo_dato, int id_tramite_solicitado, byte[] valor, string cedula)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            try
+            {
+                MySqlCommand cmd = new MySqlCommand("entregar_dato", connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new MySqlParameter("p_id_dato", id_tipo_dato));
+                cmd.Parameters.Add(new MySqlParameter("p_ciudadano", cedula));
+                cmd.Parameters.Add(new MySqlParameter("p_valor", valor));
+                cmd.Parameters.Add(new MySqlParameter("p_id_tramite_solicitado", id_tramite_solicitado));
+                cmd.Connection.Open();
+                int i = cmd.ExecuteNonQuery();
+                cmd.Connection.Close();
+
+                return ""+i;
+            }
+            catch { return "-1"; }
+        }
+
+
     }
 }
