@@ -591,7 +591,7 @@ namespace Services_Pintae
             catch { return "-1"; }
         }
 
-        public List<string> GetServiciosPorInstituciónId(int id_institución)
+        public List<string> GetServiciosPorInstitucionId(int id_institucion)
         {
             MySqlConnection connection;
             string server = "localhost";
@@ -609,14 +609,14 @@ namespace Services_Pintae
 
                 connection.Open();
 
-                string query = "SELECT nombre_servicio FROM pintae.tiposervicio WHERE ts.id_institucion = '" + id_institución + "'";
+                string query = "SELECT nombre_servicio FROM pintae.tiposervicio WHERE id_institucion = " + id_institucion + "";
                 MySqlCommand cmd = new MySqlCommand(query, connection);
                 MySqlDataReader dataReader = cmd.ExecuteReader();
                 if (dataReader.HasRows)
                 {
                     while (dataReader.Read())
                     {
-                        string temp = dataReader["nombre_insitucion"].ToString();
+                        string temp = dataReader["nombre_servicio"].ToString();
                        
                         requisitosParaTramite.Add(temp);
                     }

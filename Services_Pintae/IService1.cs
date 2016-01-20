@@ -53,7 +53,7 @@ namespace Services_Pintae
         string CallProcEntregarDato(int id_tipo_dato, int id_tramite_solicitado, byte[] valor, string cedula);
 
         [OperationContract]
-        List<string> GetServiciosPorInstituciónId(int id_institución);
+        List<string> GetServiciosPorInstitucionId(int id_institucion);
     }
 
     [DataContract]
