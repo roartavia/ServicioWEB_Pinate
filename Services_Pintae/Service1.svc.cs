@@ -591,6 +591,49 @@ namespace Services_Pintae
             catch { return "-1"; }
         }
 
+        public List<string> GetServiciosPorInstituciónId(int id_institución)
+        {
+            MySqlConnection connection;
+            string server = "localhost";
+            string database = "pintae";
+            string uid = "Rodolfo";
+            string password = "1234qwer";
+            string connectionString;
+            connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";";
+            connection = new MySqlConnection(connectionString);
+
+            List<string> requisitosParaTramite = new List<string>();
+
+            try
+            {
+
+                connection.Open();
+
+                string query = "SELECT nombre_servicio FROM pintae.tiposervicio WHERE ts.id_institucion = '" + id_institución + "'";
+                MySqlCommand cmd = new MySqlCommand(query, connection);
+                MySqlDataReader dataReader = cmd.ExecuteReader();
+                if (dataReader.HasRows)
+                {
+                    while (dataReader.Read())
+                    {
+                        string temp = dataReader["nombre_insitucion"].ToString();
+                       
+                        requisitosParaTramite.Add(temp);
+                    }
+                    dataReader.Close();
+                    connection.Close();
+
+                    return requisitosParaTramite;
+                }
+                else
+                {
+                    dataReader.Close();
+                    connection.Close();
+                    return requisitosParaTramite; //No existe ese trámite o no hay requisitos para ese tramite.
+                }
+            }
+            catch { return null; } //Error de conexión.
+        }
 
     }
 }
